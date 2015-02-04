@@ -4,19 +4,56 @@ output:
   html_document:
     keep_md: true
 ---
-
+```{r echo=FALSE}
+setwd("~/a/highEd/dataScience_coursera/reproduce/prjct1")
+   repTime<-format(Sys.time(), "%a %b %d %X %Y" )
+```
+*Running this report at `r repTime`*
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
 
 ## Loading and preprocessing the data
+```{r}
+stepdata=read.csv("data/activity.csv")
+str(stepdata)
+# Create a dataframe cmplt with no missing values
+cmplt<-stepdata[!is.na(stepdata$steps),]
+```
+## Find the mean and median of the total number of steps per day
+```{r}
+steps=aggregate(cmplt$steps, by=list(cmplt$date), FUN=sum)
 
-
-
-## What is mean total number of steps taken per day?
-
-
+step.mean=mean(steps$x)
+step.median=median(steps$x)
+tmp=sprintf("Steps per day.  Mean: %8.1f  Median %8.1f",
+        step.mean, step.median)
+```
+```{r}
+library(ggplot2)
+plt=ggplot(steps, aes(x=x)) + 
+   geom_histogram(,color="black", fill="white", binwidth=2000) +
+   labs(title=tmp, y="Number of days", 
+        x="Number of Steps") +
+   geom_vline(aes(xintercept=step.mean), color="red", 
+         linetype="dashed", size=1)
+plt
+```
+  
 
 ## What is the average daily activity pattern?
 
+```{r}
+avg5=aggregate(cmplt$steps, by=list(cmplt$interval), FUN=mean)
+most4=avg5[avg5$x==max(avg5$x),]
+tmp<-sprintf("%s\nMaximum steps (%4.1f) occured interval %5i", 
+      "Average steps per day for each 5 minute interval",
+      most4$x, most4$Group.1)
 
+ggplot(avg5, aes(x=Group.1, y=x)) + geom_line() + 
+   labs(title=tmp, x="(5 minute) Interval", y="Number of Steps")
+
+```
 
 ## Imputing missing values
 
