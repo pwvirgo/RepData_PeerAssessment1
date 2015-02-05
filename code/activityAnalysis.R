@@ -55,3 +55,11 @@ tmp<-sprintf("%s\nMaximum steps (%4.1f) occured interval %5i",
 
 ggplot(avg5, aes(x=Group.1, y=x)) + geom_line() + 
    labs(title=tmp, x="(5 minute) Interval", y="Number of Steps")
+#-------------------------------
+#  missing values
+sum(is.na(stepdata$steps))
+
+impute<-merge(stepdata, avg5, by.y="Group.1", by.x="interval")
+head(impute, 27)
+impute$steps[is.na(impute$steps)]<-impute$x[is.na(impute$steps)]
+

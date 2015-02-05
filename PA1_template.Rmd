@@ -16,28 +16,37 @@ knitr::opts_chunk$set(cache=TRUE)
 ## Loading and preprocessing the data
 ```{r}
 stepdata=read.csv("data/activity.csv")
-str(stepdata)
+summary(stepdata)
 # Create a dataframe cmplt with no missing values
 cmplt<-stepdata[!is.na(stepdata$steps),]
 ```
 ## Find the mean and median of the total number of steps per day
+Since this will be done 2 times - once ignoring missing vlaues and
+once with imputed missing values - the code to summarise the data
+will be put in a reuseable function.
 ```{r}
-steps=aggregate(cmplt$steps, by=list(cmplt$date), FUN=sum)
+stepsPerDay<-function(df) {
+   steps=aggregate(df$steps, by=list(df$date), FUN=sum)
+   
+   step.mean=mean(steps$x)
+   step.median=median(steps$x)
+   tmp=sprintf("Steps per day.  Mean: %8.1f  Median %8.1f",
+               step.mean, step.median)
 
-step.mean=mean(steps$x)
-step.median=median(steps$x)
-tmp=sprintf("Steps per day.  Mean: %8.1f  Median %8.1f",
-        step.mean, step.median)
+   library(ggplot2)
+   plt=ggplot(steps, aes(x=x)) + 
+      geom_histogram(,color="black", fill="white", binwidth=2000) +
+      labs(title=tmp, y="Number of days", 
+           x="Number of Steps") +
+      geom_vline(aes(xintercept=step.mean), color="red", 
+                 linetype="dashed", size=1)
+   plt
+}
 ```
+Create a histogram to report on the Steps per day when missing values
+are not included.  Also report the Mean and Median steps per day.
 ```{r}
-library(ggplot2)
-plt=ggplot(steps, aes(x=x)) + 
-   geom_histogram(,color="black", fill="white", binwidth=2000) +
-   labs(title=tmp, y="Number of days", 
-        x="Number of Steps") +
-   geom_vline(aes(xintercept=step.mean), color="red", 
-         linetype="dashed", size=1)
-plt
+stepsPerDay(cmplt)
 ```
   
 
@@ -56,7 +65,30 @@ ggplot(avg5, aes(x=Group.1, y=x)) + geom_line() +
 ```
 
 ## Imputing missing values
+Make a dataframe like the original data but replace missing values
+for steps with imputed values.  The imputed values are the average
+number of steps for each time interval.
+```{r}
+nmiss=sum(is.na(stepdata$steps))
+# create df impute like stepdata plus column "x" mean # steps @ interval
+impute<-merge(stepdata, avg5, by.y="Group.1", by.x="interval")
+# replace each missing steps with average sterps for that interval
+impute$steps[is.na(impute$steps)]<-impute$x[is.na(impute$steps)]
+summary(impute)
+```
+   
+There were `r nmiss` missing values in the steps that have now been
+replaced with the average values for that time period.  Re-run the 
+caluculations of mean, median and the regnersate the histogram as was
+done in the first step in this document.
+  
+```{r}
+stepsPerDay(impute)
+```
+  
+The effect of the impute is almost imperceptable, the median now equlas
+the mean, but they were nearly equal to start with.
 
-
+  
 
 ## Are there differences in activity patterns between weekdays and weekends?
