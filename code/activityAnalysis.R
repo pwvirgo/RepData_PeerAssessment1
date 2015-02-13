@@ -8,30 +8,45 @@ setwd("~/a/highEd/dataScience_coursera/reproduce/prjct1")
 unzip("activity.zip", exdir="data")
 
 stepdata=read.csv("data/activity.csv")
-
-str(stepdata)
 summary(stepdata)
+# Create a dataframe cmplt with no missing values
 cmplt<-stepdata[!is.na(stepdata$steps),]
+# -------------------------------------------------------------------
+# Find the mean and median of the total number of steps per day
+# -------------------------------------------------------------------
 
-#str(cmplt)
-# find the total number of steps per day ignoring missing values
-steps=aggregate(cmplt$steps, by=list(cmplt$date), FUN=sum)
+# -------------------------------------------------------------------
+# Since this will be done 2 times - once ignoring missing vlaues and
+# once with imputed missing values - the code to summarise the data
+# will be put in a reuseable function.
+# -------------------------------------------------------------------
+stepsPerDay<-function(df) {
+   steps=aggregate(df$steps, by=list(df$date), FUN=sum)
+   
+   stepped.mean=mean(steps$x)
+   stepped.median=median(steps$x)
+   tmp=sprintf("Steps per day.  Mean: %8.1f  Median %8.1f",
+               stepped.mean, stepped.median)
+   
+   library(ggplot2)
+   plt=ggplot(steps, aes(x=x)) + 
+      geom_histogram(,color="black", fill="white", binwidth=2000) +
+      labs(title=tmp, y="Number of days", 
+           x="Number of Steps")
+#    the following line fails
+#    "Error in eval(expr, envir, enclos) : object 'stepped.mean' not found"
+#    although it works fine in knitr!
+#    + 
+#       geom_vline(aes(xintercept=stepped.mean), color="red", 
+#                  linetype="dashed", size=1)
+   plt
+}
+# -------------------------------------------------------------------
+# Create a histogram to report on the Steps per day when missing values
+# are not included.  Also report the Mean and Median steps per day.
+# -------------------------------------------------------------------
+stepsPerDay(cmplt)
 
-step.mean=mean(steps$x)
-step.median=median(steps$x)
-format(step.mean, digits=12, nsmall=1, big.mark=",")
-sprintf("Total steps per day - mean: %8.1f  median %8.1f", step.mean, step.median)
-
-library(ggplot2)
-plt=ggplot(steps, aes(x=x)) + 
-   geom_histogram(,color="black", fill="white", binwidth=2000) +
-   labs(title="Number of Steps per Day", y="Number of days", 
-        x="Number of Steps")
-plt + 
-   geom_vline(aes(xintercept=step.mean), color="red", 
-         linetype="dashed", size=1)
-   geom_vline(aes(xintercept=step.median), color="blue", 
-         linetype="dashed", size=1)
 
 #---------------------------------------------------------------------
 # What is the Average daily activity pattern?
@@ -55,11 +70,34 @@ tmp<-sprintf("%s\nMaximum steps (%4.1f) occured interval %5i",
 
 ggplot(avg5, aes(x=Group.1, y=x)) + geom_line() + 
    labs(title=tmp, x="(5 minute) Interval", y="Number of Steps")
-#-------------------------------
-#  missing values
-sum(is.na(stepdata$steps))
 
+
+
+# -------------------------------------------------------------------
+# Imputing missing values
+# Make a dataframe like the original data but replace missing values
+# for steps with imputed values.  The imputed values are the average
+# number of steps for each time interval.
+# -------------------------------------------------------------------
+nmiss=sum(is.na(stepdata$steps))
+# create df impute like stepdata plus column "x" mean # steps @ interval
 impute<-merge(stepdata, avg5, by.y="Group.1", by.x="interval")
-head(impute, 27)
+# replace each missing steps with average sterps for that interval
 impute$steps[is.na(impute$steps)]<-impute$x[is.na(impute$steps)]
+summary(impute)
+stepsPerDay(impute)
 
+impute$date<-as.Date(impute$date)
+impute$wd<-weekdays(impute$date, abbreviate=T)
+impute$wd<-ifelse(impute$wd=="Sun" | impute$wd=="Sat","Weekend","Weekday")
+impute$wd<-as.factor(impute$wd)
+avgstep=aggregate(impute$steps, by=list(impute$wd, impute$interval),FUN=mean)
+colnames(avgstep)<-c('day_type', 'interval', 'steps')
+tmp="Mean number of steps on Weekdays and Weekends"
+
+ggplot(avgstep, aes(x=interval, y=steps, color=day_type)) + geom_line() + 
+   labs(title=tmp, x="(5 minute) Interval", y="Number of Steps") + 
+   facet_wrap(~ day_type, nrow=2) + 
+   theme_bw() +
+   theme(strip.background=element_rect(fill="#faefde"), 
+         legend.position="none")

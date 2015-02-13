@@ -1,6 +1,6 @@
 # Reproducible Research: Peer Assessment 1
 
-*Running this report at Wed Feb 04 22:40:47 2015*
+*Running this report at Thu Feb 12 22:41:11 2015*
 
 
 ## Loading and preprocessing the data
@@ -118,3 +118,33 @@ the mean, but they were nearly equal to start with.
   
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Calculate the average number of steps for each time period
+
+```r
+impute$date<-as.Date(impute$date)
+impute$wd<-weekdays(impute$date, abbreviate=T)
+impute$wd<-ifelse(impute$wd=="Sun" | impute$wd=="Sat","Weekend","Weekday")
+impute$wd<-as.factor(impute$wd)
+avgstep=aggregate(impute$steps, by=list(impute$wd, impute$interval),FUN=mean)
+colnames(avgstep)<-c('day_type', 'interval', 'steps')
+tmp="Mean number of steps on Weekdays and Weekends"
+```
+
+
+Create the plot
+
+
+
+```r
+ggplot(avgstep, aes(x=interval, y=steps, color=day_type)) + geom_line() + 
+   labs(title=tmp, x="(5 minute) Interval", y="Number of Steps") + 
+   facet_wrap(~ day_type, nrow=2) + 
+   theme_bw() +
+   theme(strip.background=element_rect(fill="#faefde"), 
+         legend.position="none")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
+  
+#### Exercise is spread over the day on weekends, mostly in the morning on weekdays
